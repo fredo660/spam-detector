@@ -18,6 +18,9 @@ from sklearn.model_selection import train_test_split
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, origins=[
+    "https://detector-spam.onrender.com"
+])
 
 # CORS : autoriser uniquement votre frontend déployé
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
