@@ -6,8 +6,8 @@ export default function Dashboard() {
 
   const recentSpam = history.filter(h => h.label === "spam").slice(0, 3);
   const accuracy = stats.total > 0
-    ? Math.round((stats.ham / stats.total) * 100)
-    : 0;
+  ? Math.round(((stats.ham + stats.spam) / stats.total) * 100)
+  : 0;
 
   return (
     <div className="page dashboard-page">
@@ -116,6 +116,10 @@ export default function Dashboard() {
         <div className="mi-row">
           <span className="mi-label">Précision estimée</span>
           <span className="mi-val ham-col">~96%</span>
+        </div>
+        <div className="mi-row">
+          <span className="mi-label">Accuracy estimée</span>
+          <span className="mi-val">{accuracy}%</span>
         </div>
       </div>
     </div>

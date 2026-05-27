@@ -85,7 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(
     () => loadLS("spam_settings", {
       threshold: 50,
-      apiUrl: "http://localhost:5000",
+      apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5000",
       language: "fr",
       notifications: true,
     })
