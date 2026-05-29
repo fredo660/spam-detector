@@ -14,12 +14,11 @@ const [sending, setSending] = useState(false);
 const [sent, setSent] = useState(false);
 
 
-
-
 const logout = async () => {
   await supabase.auth.signOut();
-  window.location.href = "/login";
 };
+
+
 
 const fromName =
   user?.user_metadata?.full_name ||
@@ -138,6 +137,8 @@ const sendComment = async () => {
     Se déconnecter
   </button>
 </div>
+
+
 
       {/* API */}
       <div className="settings-section">
