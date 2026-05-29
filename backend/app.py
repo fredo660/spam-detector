@@ -145,61 +145,85 @@ else:
 # ══════════════════════════════════════════════════════════════
 
 # ── POST /predict ─────────────────────────────────────────────
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    data    = request.get_json()
+    data = request.get_json()
     message = data.get('message', '').strip()
 
     if not message:
         return jsonify({'error': 'Message vide'}), 400
 
-    # Prédiction SVM
-    clean      = clean_fr(message)
-    pred       = model.predict([clean])[0]
-    proba      = model.predict_proba([clean])[0]
-    spam_score = round(float(proba[1]) * 100, 1)
-    ham_score  = round(float(proba[0]) * 100, 1)
-    label      = 'spam' if pred == 1 else 'ham'
+    # ── Récupération du token ─────────────────────
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
 
-    # Mots-clés détectés
-    spam_keywords = ['gratuit','urgent','félicitation','gagné','gagnant',
-                     'offre','promo','exclusif','crédit','réclamez','url',
-                     'telephone','montant','sélectionné','cliquez','alerte']
+    user_id = None
+    try:
+        user = supabase.auth.get_user(token)
+        user_id = user.user.id
+    except Exception as e:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # ── NLP + SVM ─────────────────────
+    clean = clean_fr(message)
+    pred = model.predict([clean])[0]
+    proba = model.predict_proba([clean])[0]
+
+    spam_score = round(float(proba[1]) * 100, 1)
+    ham_score = round(float(proba[0]) * 100, 1)
+    label = 'spam' if pred == 1 else 'ham'
+
+    spam_keywords = [
+        'gratuit','urgent','félicitation','gagné','gagnant',
+        'offre','promo','exclusif','crédit','réclamez','url',
+        'telephone','montant','sélectionné','cliquez','alerte'
+    ]
+
     detected = [w for w in clean.lower().split() if w in spam_keywords][:5]
 
-    # ── Sauvegarder dans Supabase ─────────────────────────────
+    # ── INSERT SUPABASE (AVEC USER_ID FIABLE) ──
     try:
         supabase.table('analyses').insert({
-            'message':    message,
+            'message': message,
             'clean_text': clean,
-            'label':      label,
+            'label': label,
             'spam_score': spam_score,
-            'ham_score':  ham_score,
-            'keywords':   detected,
+            'ham_score': ham_score,
+            'keywords': detected,
+            'user_id': user_id
         }).execute()
     except Exception as e:
-        print(f"⚠️  Erreur Supabase insert : {e}")
-        # On continue quand même — l'analyse reste valide
+        print("Supabase error:", e)
 
     return jsonify({
-        'label':      label,
+        'label': label,
         'spam_score': spam_score,
-        'ham_score':  ham_score,
-        'keywords':   detected,
+        'ham_score': ham_score,
+        'keywords': detected,
         'clean_text': clean,
+        'user_id': user_id
     })
-
 
 # ── GET /history ──────────────────────────────────────────────
 @app.route('/history', methods=['GET'])
 def get_history():
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
+    try:
+        user = supabase.auth.get_user(token)
+        user_id = user.user.id
+    except:
+        return jsonify({"error": "Unauthorized"}), 401
+
     limit  = min(int(request.args.get('limit', 50)), 100)
-    label  = request.args.get('label')   # filtre optionnel : 'spam' ou 'ham'
-    search = request.args.get('search')  # recherche texte optionnelle
+    label  = request.args.get('label')
+    search = request.args.get('search')
 
     try:
         query = supabase.table('analyses') \
             .select('id, message, label, spam_score, ham_score, keywords, created_at') \
+            .eq('user_id', user_id) \
             .order('created_at', desc=True) \
             .limit(limit)
 
@@ -209,7 +233,6 @@ def get_history():
         response = query.execute()
         items = response.data or []
 
-        # Filtre recherche côté Python (Supabase free ne supporte pas ilike facilement)
         if search:
             search_lower = search.lower()
             items = [i for i in items if search_lower in i['message'].lower()]
@@ -217,41 +240,58 @@ def get_history():
         return jsonify({'data': items, 'count': len(items)})
 
     except Exception as e:
-        print(f"⚠️  Erreur Supabase select : {e}")
         return jsonify({'error': str(e)}), 500
-
-
-# ── GET /stats ────────────────────────────────────────────────
+# GET/ stats
 @app.route('/stats', methods=['GET'])
 def get_stats():
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+
     try:
-        res = supabase.table('analyses').select('label, spam_score, ham_score').execute()
+        user = supabase.auth.get_user(token)
+        user_id = user.user.id
+    except:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        res = supabase.table('analyses') \
+            .select('label, spam_score, ham_score') \
+            .eq('user_id', user_id) \
+            .execute()
+
         items = res.data or []
 
-        total      = len(items)
+        total = len(items)
         total_spam = sum(1 for i in items if i['label'] == 'spam')
-        total_ham  = sum(1 for i in items if i['label'] == 'ham')
-        avg_score  = round(
-            sum(i['spam_score'] if i['label']=='spam' else i['ham_score'] for i in items) / total, 1
+        total_ham = sum(1 for i in items if i['label'] == 'ham')
+
+        avg_score = round(
+            sum(i['spam_score'] if i['label'] == 'spam' else i['ham_score'] for i in items) / total,
+            1
         ) if total else 0
 
         return jsonify({
-            'total':      total,
-            'spam':       total_spam,
-            'ham':        total_ham,
-            'avg_score':  avg_score,
+            'total': total,
+            'spam': total_spam,
+            'ham': total_ham,
+            'avg_score': avg_score,
         })
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
 # ── DELETE /history ───────────────────────────────────────────
 @app.route('/history', methods=['DELETE'])
 def delete_history():
+    user_id = request.args.get('user_id')
+
     try:
-        # Supprimer tous les enregistrements
-        supabase.table('analyses').delete().neq('id', 0).execute()
-        return jsonify({'status': 'ok', 'message': 'Historique effacé'})
+        supabase.table('analyses') \
+            .delete() \
+            .eq('user_id', user_id) \
+            .execute()
+
+        return jsonify({'status': 'ok', 'message': 'Historique utilisateur supprimé'})
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -1,5 +1,9 @@
 import { useApp } from "../context/AppContext";
+import { supabase } from "../lib/Supabase";
 
+const logout = async () => {
+  await supabase.auth.signOut();
+};
 const NAV = [
   { id: "dashboard", icon: "⬡", label: "Accueil" },
   { id: "messages",  icon: "◈", label: "Analyser" },
@@ -50,28 +54,43 @@ export default function Menu({
             {open && <span className="nav-label">{item.label}</span>}
             {open && page === item.id && <span className="nav-active-bar" />}
           </button>
+          
         ))}
       </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        {open && (
-          <div className="sidebar-stats-mini">
-            <div className="ssm-item">
-              <span className="ssm-val spam-col">{stats.spam}</span>
-              <span className="ssm-lbl">spam</span>
-            </div>
-            <div className="ssm-sep" />
-            <div className="ssm-item">
-              <span className="ssm-val ham-col">{stats.ham}</span>
-              <span className="ssm-lbl">ham</span>
-            </div>
-          </div>
-        )}
-        <button className="theme-btn" onClick={toggleTheme} title="Changer de thème">
-          {theme === "dark" ? "☀" : "☽"}
-        </button>
+   {/* Footer */}
+<div className="sidebar-footer">
+  {open && (
+    <div className="sidebar-stats-mini">
+      <div className="ssm-item">
+        <span className="ssm-val spam-col">{stats.spam}</span>
+        <span className="ssm-lbl">spam</span>
       </div>
+      <div className="ssm-sep" />
+      <div className="ssm-item">
+        <span className="ssm-val ham-col">{stats.ham}</span>
+        <span className="ssm-lbl">ham</span>
+      </div>
+    </div>
+  )}
+
+  {/* Theme button */}
+  <button
+    className="theme-btn"
+    onClick={toggleTheme}
+    title="Changer de thème"
+  >
+    {theme === "dark" ? "☀" : "☽"}
+  </button>
+
+  {/* Logout button */}
+  <button
+    className="theme-btn logout-btn"
+    onClick={logout}
+    title="Déconnexion"
+  >
+    ⎋
+  </button>
+</div>
     </aside>
   );
 }

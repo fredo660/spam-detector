@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 import type { ReactNode } from "react";
+import { supabase } from "../lib/Supabase";
 
 export type Label = "spam" | "ham";
 
@@ -61,6 +62,7 @@ type AppContextType = {
   remoteStats: RemoteStats;
   fetchStats: () => Promise<void>;
   stats: { spam: number; ham: number; total: number; avgScore: number };
+  user: any;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -90,6 +92,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notifications: true,
     })
   );
+  const [user, setUser] = useState<any>(null);
   const [page, setPage]       = useState("dashboard");
   const [msg, setMsg]         = useState("");
   const [result, setResult]   = useState<Result | null>(null);
@@ -99,6 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [remoteStats, setRemoteStats] = useState<RemoteStats>({
     total: 0, spam: 0, ham: 0, avg_score: 0,
   });
+  
 
   // ── Sync localStorage (thème + settings) ─────────────
   useEffect(() => {
@@ -120,12 +124,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Fetch historique depuis Flask/Supabase ────────────
   const fetchHistory = useCallback(async (label?: string, search?: string) => {
     setLoadingHistory(true);
+  
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+  
       let url = `${settings.apiUrl}/history?limit=50`;
       if (label) url += `&label=${label}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
-
-      const res  = await fetch(url);
+  
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
       const data = await res.json();
 
       // Normaliser le format Supabase → format local
@@ -149,7 +162,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Fetch stats depuis Flask/Supabase ─────────────────
   const fetchStats = useCallback(async () => {
     try {
-      const res  = await fetch(`${settings.apiUrl}/stats`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+  
+      const res = await fetch(`${settings.apiUrl}/stats`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
       const data = await res.json();
       setRemoteStats({
         total:     data.total     ?? 0,
@@ -164,14 +185,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Analyser ──────────────────────────────────────────
   const analyze = async () => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
     const text = msg.trim();
     if (!text) return;
     setLoading(true);
     try {
-      const res  = await fetch(`${settings.apiUrl}/predict`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ message: text }),
+      const res = await fetch(`${settings.apiUrl}/predict`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: text }),
       });
       const data: Result = await res.json();
       setResult(data);
@@ -189,9 +215,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Effacer l'historique (Supabase + local) ───────────
   const resetHistory = async () => {
     try {
-      await fetch(`${settings.apiUrl}/history`, { method: "DELETE" });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+  
+      await fetch(`${settings.apiUrl}/history`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
       setHistory([]);
       setRemoteStats({ total: 0, spam: 0, ham: 0, avg_score: 0 });
+  
     } catch (e) {
       console.error("Erreur resetHistory :", e);
     }
@@ -208,7 +244,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     total:    remoteStats.total,
     avgScore: remoteStats.avg_score,
   };
-
+  useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+  
+      if (error) {
+        console.error("Erreur auth user :", error.message);
+        setUser(null);
+        return;
+      }
+  
+      setUser(data.user ?? null);
+    };
+  
+    getUser();
+  
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+  
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
   return (
     <AppContext.Provider value={{
       theme, toggleTheme, page, setPage, msg, setMsg,
@@ -217,6 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       settings, setSettings,
       analyze, clearAll, resetHistory,
       fetchHistory, remoteStats, fetchStats, stats,
+      user,
     }}>
       {children}
     </AppContext.Provider>

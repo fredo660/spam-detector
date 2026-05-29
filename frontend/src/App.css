@@ -759,3 +759,118 @@ button.clear-btn:hover { border-color: var(--muted); color: var(--text); }
   .kw-section, .clean-section { padding: .75rem; }
   .kw-pill { font-size: 11px; padding: 2px 8px; }
 }
+.logout-btn {
+  color: #ff4d4f;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 77, 79, 0.1);
+}
+.profile-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.settings-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #0b0f1a;
+  color: white;
+  margin-bottom: 10px;
+}
+.profile-card-modern {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6c5ce7, #00d2ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  font-size: 18px;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.profile-email {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #aab0b7;
+}
+
+.profile-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 255, 120, 0.12);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 120, 0.3);
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.label {
+  color: #9aa4ad;
+}
+
+.value {
+  color: #e6e6e6;
+}
+
+.value.success {
+  color: #00ff88;
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.profile-empty {
+  padding: 12px;
+  color: #aaa;
+  font-size: 13px;
+}

@@ -1,6 +1,7 @@
 import { useApp } from "../context/AppContext";
 import Graphique from "../components/Graphique";
 
+
 export default function Dashboard() {
   const { stats, history, setPage } = useApp();
 
