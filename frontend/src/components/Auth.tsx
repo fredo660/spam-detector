@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/Supabase';
 import './Auth.css';
 
+
 type AuthMode = 'login' | 'signup' | 'verify' | 'forgot';
 
 interface AuthProps {
@@ -18,7 +19,11 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [success, setSuccess]     = useState('');
   const [showPass, setShowPass]   = useState(false);
   const [mounted, setMounted]     = useState(false);
+ 
 
+
+
+  
   // Code de vérification OTP (6 chiffres)
   const [otpCode, setOtpCode]     = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -240,6 +245,7 @@ const handleResend = async () => {
       }
     } finally {
       setLoading(false);
+      window.location.href = "/landing";
     }
   };
 

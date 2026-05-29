@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp } from "../context/AppContext"
 import emailjs from "@emailjs/browser";
+import { supabase } from "../lib/Supabase";
 
 export default function Settings() {
   const { settings, setSettings, theme, toggleTheme, resetHistory, stats, user } = useApp();
@@ -12,25 +13,35 @@ export default function Settings() {
 const [sending, setSending] = useState(false);
 const [sent, setSent] = useState(false);
 
+
+
+
+const logout = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/login";
+};
+
+const fromName =
+  user?.user_metadata?.full_name ||
+  user?.email?.split("@")[0] ||
+  "Utilisateur inconnu";
+
 const sendComment = async () => {
   if (!comment.trim() || sending) return;
 
   setSending(true);
 
   try {
-    await emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-      {
-        from_name:
-          user?.user_metadata?.full_name ||
-          user?.email?.split("@")[0] ||
-          "Utilisateur inconnu",
-        message: comment,
-        to_email: "fredoaldamah@gmail.com",
-      },
-      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-    );
+  await emailjs.send(
+  import.meta.env.VITE_EMAILJS_SERVICE_ID,
+  import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+  {
+    from_name: fromName,
+    message: comment,
+    to_email: "fredoaldamah@gmail.com",
+  },
+  import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+);
 
     setSent(true);
     setComment("");
@@ -117,6 +128,15 @@ const sendComment = async () => {
       <p>Aucun utilisateur connecté</p>
     </div>
   )}
+</div>
+
+{/* LOGOUT MOBILE ONLY */}
+<div className="settings-section mobile-only">
+  <p className="settings-section-title">Session</p>
+
+  <button className="btn-danger" onClick={logout}>
+    Se déconnecter
+  </button>
 </div>
 
       {/* API */}
