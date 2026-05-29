@@ -245,7 +245,7 @@ const handleResend = async () => {
       }
     } finally {
       setLoading(false);
-      window.location.href = "/landing";
+      
     }
   };
 
